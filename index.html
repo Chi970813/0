@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <title>SDG 保育陸域生態 - 第一關</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: sans-serif;
+      background: url('https://static.vecteezy.com/system/resources/previews/000/294/449/original/a-nature-road-landscape-vector.jpg') no-repeat center center fixed;
+      background-size: cover;
+      overflow-x: hidden;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 20px;
+      background-color: rgba(255, 255, 255, 0.8);
+      font-size: 20px;
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      display: none;
+    }
+    .animal {
+      position: absolute;
+      width: 150px;
+      height: auto;
+      cursor: pointer;
+      user-select: none;
+      transition: opacity 0.5s ease;
+      display: none;
+      z-index: 5;
+    }
+    .correct-effect {
+      animation: flashGlow 0.8s ease forwards;
+      box-shadow: 0 0 20px 5px #aaffaa;
+      border-radius: 15px;
+      transform-origin: center center;
+      z-index: 10;
+    }
+    @keyframes flashGlow {
+      0% { transform: scale(1); box-shadow: 0 0 0px 0px #aaffaa; }
+      50% { transform: scale(1.15); box-shadow: 0 0 25px 10px #aaffaa; }
+      100% { transform: scale(1); box-shadow: 0 0 0px 0px #aaffaa; }
+    }
+    #questionBox, #endScreen {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: #fff;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+      z-index: 20;
+      display: none;
+      width: 300px;
+      user-select: none;
+    }
+    #choices button, #retryBtn, #nextLevelBtn {
+      display: block;
+      width: 100%;
+      margin: 5px 0;
+      padding: 10px;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+    #introScreen {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 50, 0, 0.85);
+      color: #d4f1be;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      padding: 20px;
+      z-index: 40;
+    }
+    #introScreen h1 { font-size: 2.8rem; margin-bottom: 20px; }
+    #introScreen p { font-size: 1.3rem; line-height: 1.6; max-width: 400px; margin-bottom: 40px; }
+    #startBtn {
+      background-color: #a3c644;
+      border: none;
+      padding: 15px 40px;
+      font-size: 1.2rem;
+      color: white;
+      border-radius: 8px;
+      cursor: pointer;
+      box-shadow: 0 5px 10px #78912f;
+      transition: background-color 0.3s ease;
+    }
+    #startBtn:hover { background-color: #8ab130; }
+  </style>
+</head>
+<body>
+
+<!-- 🎵 背景音樂 -->
+<audio id="bgMusic" src="music.mp3" loop></audio>
+<script>
+  const music = document.getElementById('bgMusic');
+  music.volume = 0.3; // 音量設定
+
+  window.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('startBtn').addEventListener('click', () => {
+      music.play().catch(() => {
+        console.warn("使用者尚未互動，音樂無法自動播放");
+      });
+    });
+  });
+</script>
+
+<div id="introScreen">
+  <h1>歡迎來到保育陸域生態冒險 - 第一關！</h1>
+  <p>點擊畫面上的動物，回答問題，答對才會出現下一隻！</p>
+  <button id="startBtn">開始遊戲</button>
+</div>
+
+<header>
+  <div>SDG 保育陸域生態</div>
+  <div>分數：<span id="score">0</span>/10</div>
+</header>
+
+<!-- 動物圖片 -->
+<img src="images/deer.png" class="animal" alt="deer" />
+<img src="images/fox.png" class="animal" alt="fox" />
+<img src="images/bear.png" class="animal" alt="bear" />
+<img src="images/rabbit.png" class="animal" alt="rabbit" />
+<img src="images/owl.png" class="animal" alt="owl" />
+<img src="images/squirrel.png" class="animal" alt="squirrel" />
+<img src="images/monkey.png" class="animal" alt="monkey" />
+<img src="images/panda.png" class="animal" alt="panda" />
+<img src="images/parrot.png" class="animal" alt="parrot" />
+<img src="images/tapir.png" class="animal" alt="tapir" />
+
+<!-- 題目區 -->
+<div id="questionBox">
+  <div id="questionText"></div>
+  <div id="choices"></div>
+</div>
+
+<!-- 結果畫面 -->
+<div id="endScreen">
+  <div id="resultText"></div>
+  <button id="retryBtn">重新挑戰</button>
+  <button id="nextLevelBtn">前進下一關</button>
+</div>
+
+<script>
+const questions = [
+  {question:"什麼是生物多樣性？",choices:["只有哺乳類動物的多樣性","所有生命形式的多樣性","森林樹木數量","水資源的多寡"],answer:1},
+  {question:"哪一項行為有助於保護森林？",choices:["砍伐老樹","亂丟垃圾","參與植樹活動","獵捕野生動物"],answer:2},
+  {question:"以下哪個是陸域生態系的一部分？",choices:["珊瑚礁","城市建築","熱帶雨林","水壩"],answer:2},
+  {question:"野生動物過度捕獵會造成什麼後果？",choices:["增加生物多樣性","讓物種瀕臨絕種","促進旅遊業","增加森林覆蓋率"],answer:1},
+  {question:"為什麼要保護濕地？",choices:["因為它們不重要","它們是垃圾堆放地","它們支持許多生物生存","它們可以蓋房子"],answer:2},
+  {question:"SDG 第15項目標是關於什麼？",choices:["減少貧窮","保育陸域生態","性別平等","氣候行動"],answer:1},
+  {question:"種植本土植物有什麼好處？",choices:["佔用土地","促進外來種生長","維護生態平衡","浪費水資源"],answer:2},
+  {question:"何者為保育陸域生態的正確做法？",choices:["隨意捕捉野生動物","保留棲地環境","過度放牧","砍伐原始林"],answer:1},
+  {question:"森林面積減少會導致什麼？",choices:["更多動物棲息地","氣候穩定","物種滅絕風險上升","空氣品質改善"],answer:2},
+  {question:"我們可以怎麼參與保育？",choices:["不分類垃圾","支持永續產品","破壞棲地","食用野味"],answer:1}
+];
+
+let current = 0;
+let score = 0;
+let currentAnimal = null;
+let isQuestionActive = false;
+
+function placeAnimal(animal) {
+  const margin = 20;
+  const containerWidth = window.innerWidth;
+  const containerHeight = window.innerHeight;
+  const groundYMin = containerHeight * 0.6;
+  const groundYMax = containerHeight * 0.85;
+
+  let x = Math.random() * (containerWidth - 150 - margin);
+  let y = groundYMin + Math.random() * (groundYMax - groundYMin);
+  animal.style.left = x + "px";
+  animal.style.top = y + "px";
+}
+
+function showAnimal(index) {
+  const animals = document.querySelectorAll('.animal');
+  animals.forEach(a => {
+    a.style.display = "none";
+    a.style.opacity = 1;
+    a.classList.remove('correct-effect');
+  });
+  if (index >= animals.length) return false;
+  currentAnimal = animals[index];
+  placeAnimal(currentAnimal);
+  currentAnimal.style.display = "block";
+  return true;
+}
+
+function showQuestion() {
+  if (current >= questions.length) return;
+  isQuestionActive = true;
+  const q = questions[current];
+  const box = document.getElementById('questionBox');
+  document.getElementById('questionText').textContent = q.question;
+  const choicesDiv = document.getElementById('choices');
+  choicesDiv.innerHTML = '';
+  q.choices.forEach((choice, i) => {
+    const btn = document.createElement('button');
+    btn.textContent = choice;
+    btn.onclick = () => checkAnswer(i);
+    choicesDiv.appendChild(btn);
+  });
+  box.style.display = 'block';
+}
+
+function hideQuestion() {
+  isQuestionActive = false;
+  document.getElementById('questionBox').style.display = 'none';
+}
+
+function checkAnswer(index) {
+  if (!isQuestionActive) return;
+  const q = questions[current];
+  if (index === q.answer) {
+    score++;
+    document.getElementById('score').textContent = score;
+    hideQuestion();
+    currentAnimal.classList.add('correct-effect');
+    currentAnimal.style.pointerEvents = "none";
+
+    currentAnimal.addEventListener('animationend', () => {
+      currentAnimal.style.transition = "opacity 0.6s ease";
+      currentAnimal.style.opacity = 0;
+      currentAnimal.addEventListener('transitionend', () => {
+        currentAnimal.style.display = 'none';
+        current++;
+        if (!showAnimal(current)) {
+          showEndScreen();
+        }
+      }, { once: true });
+    }, { once: true });
+  } else {
+    alert('答錯了，再試一次！');
+  }
+}
+
+function showEndScreen() {
+  const end = document.getElementById('endScreen');
+  const result = document.getElementById('resultText');
+  end.style.display = 'block';
+  result.textContent = score >= 8
+    ? `太棒了！你答對了 ${score} 題，成功守護森林！`
+    : `你答對了 ${score} 題，繼續努力保護生態！`;
+}
+
+window.onload = () => {
+  const intro = document.getElementById('introScreen');
+  const startBtn = document.getElementById('startBtn');
+  const header = document.querySelector('header');
+
+  startBtn.addEventListener('click', () => {
+    intro.style.display = 'none';
+    header.style.display = 'flex';
+    showAnimal(current);
+  });
+
+  document.querySelectorAll('.animal').forEach(animal => {
+    animal.addEventListener('click', () => {
+      if (!isQuestionActive && animal === currentAnimal) {
+        showQuestion();
+      }
+    });
+  });
+
+  document.getElementById('retryBtn').addEventListener('click', () => {
+    location.reload();
+  });
+
+  document.getElementById('nextLevelBtn').addEventListener('click', () => {
+    window.location.href = "level2.html";
+  });
+};
+</script>
+
+</body>
+</html>
