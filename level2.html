@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <title>關卡二：森林守護行動</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background: url('images/bg.jpg') no-repeat center center fixed;
+      background-size: cover;
+      font-family: "Microsoft JhengHei", sans-serif;
+    }
+
+    #introScreen {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: rgba(0, 0, 0, 0.8);
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 20;
+      text-align: center;
+      padding: 30px;
+    }
+
+    #startBtn {
+      margin-top: 20px;
+      padding: 15px 30px;
+      font-size: 1.2rem;
+      background-color: #66bb6a;
+      border: none;
+      border-radius: 10px;
+      color: white;
+      cursor: pointer;
+    }
+
+    #hand {
+      position: absolute;
+      bottom: 10px;
+      width: 180px;
+      transition: left 0.1s linear;
+      z-index: 10;
+    }
+
+    .falling {
+      position: absolute;
+      top: -100px;
+      width: 120px;
+      transition: transform 0.2s;
+    }
+
+    #scoreBoard {
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      color: #fff;
+      background: rgba(0, 0, 0, 0.5);
+      padding: 10px 20px;
+      border-radius: 10px;
+      font-size: 18px;
+      z-index: 15;
+    }
+
+    #endScreen {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: white;
+      padding: 30px;
+      border-radius: 10px;
+      text-align: center;
+      display: none;
+      z-index: 30;
+    }
+
+    #nextBtn, #restartBtn {
+      margin-top: 20px;
+      padding: 10px 20px;
+      font-size: 16px;
+      background-color: #4caf50;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    #restartBtn {
+      background-color: #f44336;
+      margin-left: 10px;
+    }
+  </style>
+</head>
+<body>
+
+<!-- 🎵 背景音樂 -->
+<audio id="bgMusic" src="music.mp3" loop></audio>
+<script>
+  const bgMusic = document.getElementById('bgMusic');
+  bgMusic.volume = 0.3; // 音量可依需求調整
+</script>
+
+<div id="introScreen">
+  <h1>關卡二：森林守護行動</h1>
+  <p>控制手掌接住落下的樹木來保護森林，避免山老鼠破壞環境。接到樹木加分，接到山老鼠扣分。</p>
+  <button id="startBtn">開始遊戲</button>
+</div>
+
+<div id="scoreBoard">分數：<span id="score">0</span></div>
+
+<img id="hand" src="images/hand.png" alt="手掌" />
+
+<div id="endScreen">
+  <h2>遊戲結束！</h2>
+  <p id="finalScore"></p>
+  <button id="nextBtn" onclick="location.href='level3.html'">前進下一關</button>
+  <button id="restartBtn" onclick="restartGame()" style="display: none;">重新開始</button>
+</div>
+
+<script>
+  let score = 0;
+  let gameInterval;
+  const hand = document.getElementById('hand');
+  const scoreSpan = document.getElementById('score');
+
+  document.addEventListener('mousemove', e => {
+    hand.style.left = (e.clientX - hand.offsetWidth / 2) + 'px';
+  });
+
+  document.getElementById('startBtn').onclick = () => {
+    document.getElementById('introScreen').style.display = 'none';
+    bgMusic.play().catch(() => {
+      console.warn("使用者尚未互動，音樂無法播放");
+    });
+    startGame();
+  };
+
+  function startGame() {
+    gameInterval = setInterval(spawnItem, 900);
+    setTimeout(endGame, 30000);
+  }
+
+  function spawnItem() {
+    const isTree = Math.random() < 0.6;
+    const item = document.createElement('img');
+    item.src = isTree ? 'images/tree.png' : 'images/rat.png';
+    item.classList.add('falling');
+    item.classList.add(isTree ? 'tree' : 'rat');
+
+    const startX = Math.random() * (window.innerWidth - 80);
+    item.style.left = `${startX}px`;
+    document.body.appendChild(item);
+
+    let y = -100;
+    const fallSpeed = 10;
+
+    const fallInterval = setInterval(() => {
+      y += fallSpeed;
+      item.style.top = `${y}px`;
+
+      const handRect = hand.getBoundingClientRect();
+      const itemRect = item.getBoundingClientRect();
+
+      if (
+        itemRect.bottom >= handRect.top &&
+        itemRect.left < handRect.right &&
+        itemRect.right > handRect.left &&
+        itemRect.top < handRect.bottom
+      ) {
+        if (item.classList.contains('tree')) {
+          score += 1;
+        } else {
+          score -= 1;
+        }
+        scoreSpan.textContent = score;
+        item.remove();
+        clearInterval(fallInterval);
+      }
+
+      if (y > window.innerHeight) {
+        item.remove();
+        clearInterval(fallInterval);
+      }
+    }, 20);
+  }
+
+  function endGame() {
+    clearInterval(gameInterval);
+    document.getElementById('endScreen').style.display = 'block';
+    document.getElementById('finalScore').textContent = `你得到的分數是：${score}`;
+
+    if (score < 10) {
+      document.getElementById('nextBtn').style.display = 'none';
+      document.getElementById('restartBtn').style.display = 'inline-block';
+    } else {
+      document.getElementById('nextBtn').style.display = 'inline-block';
+      document.getElementById('restartBtn').style.display = 'none';
+    }
+  }
+
+  function restartGame() {
+    location.reload();
+  }
+</script>
+
+</body>
+</html>

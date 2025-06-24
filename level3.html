@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <title>關卡三：辨識外來種</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background: url('images/grass.jpg') no-repeat center center fixed;
+      background-size: cover;
+      font-family: "Microsoft JhengHei", sans-serif;
+    }
+
+    #introScreen, #endScreen {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.8);
+      color: white;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 20;
+      text-align: center;
+      padding: 30px;
+    }
+
+    #startBtn, #restartBtn, #nextBtn {
+      margin-top: 20px;
+      padding: 12px 24px;
+      font-size: 16px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      color: white;
+    }
+
+    #startBtn { background-color: #4caf50; }
+    #restartBtn { background-color: #f44336; display: none; }
+    #nextBtn { background-color: #2196f3; display: none; }
+
+    .animal {
+      position: absolute;
+      width: 180px;
+      cursor: pointer;
+      transition: transform 0.1s;
+    }
+
+    #scoreBoard {
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      background: rgba(0, 0, 0, 0.5);
+      color: white;
+      padding: 10px 20px;
+      border-radius: 10px;
+      font-size: 18px;
+      z-index: 10;
+    }
+
+    #guide {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      background: rgba(255,255,255,0.9);
+      padding: 6px;
+      border-radius: 10px;
+      z-index: 30;
+      user-select: none;
+    }
+
+    #guide img {
+      width: 48px;
+      height: 48px;
+      cursor: pointer;
+      border-radius: 6px;
+      border: 2px solid transparent;
+      transition: border-color 0.3s;
+    }
+
+    #guide img:hover {
+      border-color: #2196f3;
+    }
+
+    #popupOverlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.7);
+      z-index: 100;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    #popupImage {
+      max-width: 80vw;
+      max-height: 80vh;
+      border: 5px solid white;
+      border-radius: 12px;
+      box-shadow: 0 0 20px white;
+      cursor: pointer;
+      user-select: none;
+    }
+  </style>
+</head>
+<body>
+
+<!-- 🎵 背景音樂 -->
+<audio id="bgMusic" src="music.mp3" loop></audio>
+<script>
+  const bgMusic = document.getElementById('bgMusic');
+  bgMusic.volume = 0.3;
+</script>
+
+<div id="introScreen">
+  <h1>關卡三：辨識外來種</h1>
+  <p>草原中冒出各種動物，在 30 秒內點擊外來種來得分。</p>
+  <p>誤點本土種會扣分喔！</p>
+  <button id="startBtn">開始遊戲</button>
+</div>
+
+<div id="scoreBoard">
+  分數：<span id="score">0</span><br>
+  時間：<span id="time">30</span> 秒
+</div>
+
+<div id="guide" title="點擊圖片放大">
+  <img id="guideImage" src="images/圖鑑.jpg" alt="動物圖示" />
+</div>
+
+<div id="popupOverlay">
+  <img id="popupImage" src="" alt="放大動物圖片" />
+</div>
+
+<div id="endScreen" style="display:none;">
+  <h2>時間到！</h2>
+  <p id="finalScore"></p>
+  <button id="restartBtn">重新挑戰</button>
+  <button id="nextBtn">下一關</button>
+</div>
+
+<script>
+  const animals = [
+    { name: '沙氏變色蜥', src: 'images/沙氏變色蜥.png', invasive: true },
+    { name: '綠鬣蜥', src: 'images/綠鬣蜥.png', invasive: true },
+    { name: '綠水龍', src: 'images/綠水龍.png', invasive: true },
+    { name: '斑腿樹蛙', src: 'images/斑腿樹蛙.png', invasive: true },
+    { name: '台灣石虎', src: 'images/台灣石虎.png', invasive: false },
+    { name: '台灣黑熊', src: 'images/台灣黑熊.png', invasive: false },
+    { name: '赤腹游蛇', src: 'images/赤腹游蛇.png', invasive: false }
+  ];
+
+  const guideImage = document.getElementById('guideImage');
+  const popupOverlay = document.getElementById('popupOverlay');
+  const popupImage = document.getElementById('popupImage');
+  const scoreSpan = document.getElementById('score');
+  const timeSpan = document.getElementById('time');
+  const introScreen = document.getElementById('introScreen');
+  const endScreen = document.getElementById('endScreen');
+  const restartBtn = document.getElementById('restartBtn');
+  const nextBtn = document.getElementById('nextBtn');
+
+  let score = 0;
+  let spawnInterval;
+  let timeLeft = 30000;
+  let timerStart;
+  let timerRemaining = timeLeft;
+  let gamePaused = false;
+
+  guideImage.addEventListener('click', (e) => {
+    e.stopPropagation();
+    showPopup(guideImage.src, guideImage.alt);
+  });
+
+  function showPopup(src, alt) {
+    pauseGame();
+    popupImage.src = src;
+    popupImage.alt = alt;
+    popupOverlay.style.display = 'flex';
+  }
+
+  function hidePopup() {
+    popupOverlay.style.display = 'none';
+    resumeGame();
+  }
+
+  popupOverlay.addEventListener('click', (e) => {
+    if (e.target === popupOverlay) {
+      hidePopup();
+    }
+  });
+
+  popupImage.addEventListener('click', (e) => {
+    e.stopPropagation();
+  });
+
+  document.getElementById('startBtn').onclick = () => {
+    introScreen.style.display = 'none';
+    bgMusic.play().catch(() => console.warn("音樂未播放，可能是瀏覽器限制"));
+    startGame();
+  };
+
+  restartBtn.onclick = () => location.reload();
+  nextBtn.onclick = () => location.href = 'level4.html';
+
+  function startGame() {
+    score = 0;
+    scoreSpan.textContent = score;
+    timeLeft = 30000;
+    timerRemaining = timeLeft;
+    timeSpan.textContent = Math.ceil(timeLeft / 1000);
+    endScreen.style.display = 'none';
+
+    startTimer();
+    spawnInterval = setInterval(spawnAnimal, 800);
+  }
+
+  function startTimer() {
+    timerStart = performance.now();
+    requestAnimationFrame(timerTick);
+  }
+
+  function timerTick() {
+    if (timerRemaining <= 0) {
+      timeSpan.textContent = '0';
+      endGame();
+      return;
+    }
+    if (!gamePaused) {
+      const now = performance.now();
+      const elapsed = now - timerStart;
+      timerRemaining -= elapsed;
+      timerStart = now;
+      timeSpan.textContent = Math.ceil(timerRemaining / 1000);
+    }
+    requestAnimationFrame(timerTick);
+  }
+
+  function pauseGame() {
+    if (!gamePaused) {
+      gamePaused = true;
+      clearInterval(spawnInterval);
+    }
+  }
+
+  function resumeGame() {
+    if (gamePaused) {
+      gamePaused = false;
+      timerStart = performance.now();
+      spawnInterval = setInterval(spawnAnimal, 800);
+    }
+  }
+
+  function spawnAnimal() {
+    const animal = animals[Math.floor(Math.random() * animals.length)];
+    const img = document.createElement('img');
+    img.src = animal.src;
+    img.alt = animal.name;
+    img.className = 'animal';
+
+    let x = Math.random() * (window.innerWidth - 100);
+    let y = Math.random() * (window.innerHeight - 200) + 100;
+    img.style.left = `${x}px`;
+    img.style.top = `${y}px`;
+
+    img.onclick = () => {
+      if (animal.invasive) {
+        score++;
+      } else {
+        score--;
+      }
+      scoreSpan.textContent = score;
+      img.remove();
+    };
+
+    document.body.appendChild(img);
+
+    setTimeout(() => {
+      if (img.parentNode) img.remove();
+    }, 1200);
+  }
+
+  function removeAllAnimals() {
+    document.querySelectorAll('.animal').forEach(el => el.remove());
+  }
+
+  function endGame() {
+    clearInterval(spawnInterval);
+    removeAllAnimals();
+    endScreen.style.display = 'flex';
+    document.getElementById('finalScore').textContent = `你的最終分數：${score}`;
+
+    if (score >= 10) {
+      nextBtn.style.display = 'inline-block';
+      restartBtn.style.display = 'none';
+    } else {
+      nextBtn.style.display = 'none';
+      restartBtn.style.display = 'inline-block';
+    }
+  }
+</script>
+
+</body>
+</html>
